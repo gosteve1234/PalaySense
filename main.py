@@ -119,6 +119,7 @@ with col_upload:
             <span style="font-size:13px;font-weight:500;color:#1a1a16;">{image_file.name}</span>
         </div>
         """, unsafe_allow_html=True)
+
 with col_result:
     st.markdown('<p class="panel-label">Detection Result</p>', unsafe_allow_html=True)
 
@@ -131,22 +132,28 @@ with col_result:
         </div>
         """, unsafe_allow_html=True)
     else:
-        label, confidence = st.session_state.result
+        # FIX 1: unpack recommendation too
+        label, confidence, recommendation = st.session_state.result
         bar_width = int(confidence)
+        # Build recommendation list HTML
+        rec_items = "".join([f"<li style='margin-bottom:6px;'>{r}</li>" for r in recommendation])
         st.markdown(f"""
         <div class="result-box">
             <p style="font-size:12px;color:#6b6b65;margin-bottom:4px;">Detection Category</p>
             <p class="result-category">{label}</p>
             <p class="result-accuracy">Confidence: {confidence:.2f}% (how sure we are at Guessing this image)</p>
-            <div style="display:flex;align-items:center;gap:10px;">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
                 <div class="bar-bg" style="flex:1;">
                     <div class="bar-fill" style="width:{bar_width}%;"></div>
-            <p class="Recommendations">Recommedations: </p>
                 </div>
                 <span style="font-size:12px;font-weight:500;color:#2d5016;min-width:36px;">{confidence:.1f}%</span>
             </div>
+            <p style="font-size:13px;font-weight:600;color:#2d5016;margin-bottom:8px;">Recommendations:</p>
+            <ul style="font-size:13px;color:#3a3a34;padding-left:18px;margin:0;line-height:1.8;">
+                {rec_items}
+            </ul>
         </div>
-        """, unsafe_allow_html=True) #Currently working on with recommendations
+        """, unsafe_allow_html=True)
 
         st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
 
@@ -155,7 +162,8 @@ with col_result:
         with dl_col1:
             if image_file is not None:
                 image_file.seek(0)
-                png_buf = generate_png(image_file, label, confidence)
+                # FIX 2: pass recommendation to generate_png
+                png_buf = generate_png(image_file, label, confidence, recommendation)
                 st.download_button(
                     label="⬇️ Download as PNG",
                     data=png_buf,
@@ -167,7 +175,8 @@ with col_result:
         with dl_col2:
             if image_file is not None:
                 image_file.seek(0)
-                pdf_buf = generate_pdf(image_file, label, confidence)
+                # FIX 3: pass recommendation to generate_pdf
+                pdf_buf = generate_pdf(image_file, label, confidence, recommendation)
                 st.download_button(
                     label="⬇️ Download as PDF",
                     data=pdf_buf,
@@ -196,8 +205,9 @@ with btn_col:
                 time.sleep(0.15)
 
             image_file.seek(0)
-            label, confidence = predict_image(image_file, model, class_names)
-            st.session_state.result = (label, confidence)
+            # FIX 4: unpack recommendation from predict_image
+            label, confidence, recommendation = predict_image(image_file, model, class_names)
+            st.session_state.result = (label, confidence, recommendation)
             progress.progress(100, text="Scan complete")
             time.sleep(0.15)
             progress.empty()

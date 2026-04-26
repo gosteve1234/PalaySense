@@ -4,14 +4,17 @@ from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 from reportlab.lib import colors
 
-def generate_png(image_file, label, confidence):
+def generate_png(image_file, label, confidence, recommendation=None):
     img = Image.open(image_file).convert("RGB")
     img = img.resize((500, 400))
 
-    result_banner = Image.new("RGB", (500, 120), color=(238, 244, 231))
+    rec_lines = recommendation or []
+    banner_height = 120 + (len(rec_lines) * 22) + 30
+
+    result_banner = Image.new("RGB", (500, banner_height), color=(238, 244, 231))
     draw = ImageDraw.Draw(result_banner)
 
-    draw.text((20, 15), "🌿 PALAi — Detection Result", fill=(45, 80, 22))
+    draw.text((20, 15), "PALAi — Detection Result", fill=(45, 80, 22))
     draw.text((20, 45), f"Category: {label}", fill=(30, 30, 30))
     draw.text((20, 70), f"Confidence: {confidence:.2f}%", fill=(90, 90, 84))
 
@@ -20,7 +23,14 @@ def generate_png(image_file, label, confidence):
     draw.rectangle([20, 95, 480, 108], fill=bar_bg)
     draw.rectangle([20, 95, 20 + int(4.6 * confidence), 108], fill=bar_fill)
 
-    combined = Image.new("RGB", (500, 520), color=(255, 255, 255))
+    if rec_lines:
+        draw.text((20, 118), "Recommendations:", fill=(45, 80, 22))
+        for i, line in enumerate(rec_lines):
+            # Strip emoji for PIL compatibility
+            clean = line.encode('ascii', 'ignore').decode()
+            draw.text((20, 140 + i * 22), f"- {clean.strip()}", fill=(58, 58, 52))
+
+    combined = Image.new("RGB", (500, 400 + banner_height), color=(255, 255, 255))
     combined.paste(img, (0, 0))
     combined.paste(result_banner, (0, 400))
 
@@ -30,7 +40,7 @@ def generate_png(image_file, label, confidence):
     return buf
 
 
-def generate_pdf(image_file, label, confidence):
+def generate_pdf(image_file, label, confidence, recommendation=None):
     buf = io.BytesIO()
     c = canvas.Canvas(buf, pagesize=letter)
     width, height = letter
@@ -58,6 +68,17 @@ def generate_pdf(image_file, label, confidence):
     c.setFillColor(colors.HexColor("#3d6b1e"))
     c.rect(40, height - 170, int(4 * confidence), 10, fill=True, stroke=False)
 
+    # Recommendations
+    if recommendation:
+        c.setFillColor(colors.HexColor("#2d5a1b"))
+        c.setFont("Helvetica-Bold", 12)
+        c.drawString(40, height - 200, "Recommendations:")
+        c.setFont("Helvetica", 10)
+        c.setFillColor(colors.HexColor("#3a3a34"))
+        for i, line in enumerate(recommendation):
+            clean = line.encode('ascii', 'ignore').decode().strip()
+            c.drawString(50, height - 220 - (i * 18), f"- {clean}")
+
     # Uploaded Image
     img = Image.open(image_file).convert("RGB")
     img_buf = io.BytesIO()
@@ -65,7 +86,8 @@ def generate_pdf(image_file, label, confidence):
     img_buf.seek(0)
 
     from reportlab.lib.utils import ImageReader
-    c.drawImage(ImageReader(img_buf), 40, height - 420, width=300, height=220)
+    img_y = height - 220 - (len(recommendation or []) * 18) - 240
+    c.drawImage(ImageReader(img_buf), 40, img_y, width=300, height=220)
 
     # Footer
     c.setFont("Helvetica", 9)
