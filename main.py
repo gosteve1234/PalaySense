@@ -1,4 +1,5 @@
 import streamlit as st
+import time
 from src.detector import predict_image, model, class_names
 from src.export import generate_png, generate_pdf
 
@@ -184,9 +185,22 @@ with btn_col:
         if image_file is None:
             st.error("Please upload an image first.")
         else:
-            with st.spinner("Analyzing image..."):
-                label, confidence = predict_image(image_file, model, class_names)
-                st.session_state.result = (label, confidence)
+            progress = st.progress(0, text="Scanning image...")
+            for pct, msg in [
+                (20, "Preparing image..."),
+                (45, "Extracting features..."),
+                (75, "Running model inference..."),
+                (95, "Finalizing result..."),
+            ]:
+                progress.progress(pct, text=msg)
+                time.sleep(0.15)
+
+            image_file.seek(0)
+            label, confidence = predict_image(image_file, model, class_names)
+            st.session_state.result = (label, confidence)
+            progress.progress(100, text="Scan complete")
+            time.sleep(0.15)
+            progress.empty()
             st.rerun()
 
 # Reset
