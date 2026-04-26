@@ -1,6 +1,6 @@
 import streamlit as st
 from src.detector import predict_image, model, class_names
-from export import generate_png, generate_pdf
+from src.export import generate_png, generate_pdf
 
 st.set_page_config(page_title="PALAi", page_icon="🌿", layout="wide")
 
