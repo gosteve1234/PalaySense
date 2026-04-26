@@ -9,7 +9,7 @@
 
 - 🔍 Detects brown spots from uploaded plant images
 - 📊 Confidence scoring with visual progress bar
-- 💡 Recommendations based on detection result
+- 💡 Recommendations based on detection result (In Progress)
 - 🖼️ Supports PNG, JPG, JPEG FORMAT
 
 ---
