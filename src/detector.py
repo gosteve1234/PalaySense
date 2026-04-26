@@ -3,13 +3,20 @@ import torch.nn as nn
 from torchvision import models, transforms
 from PIL import Image
 import os
+from pathlib import Path
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+MODEL_PATH = BASE_DIR / "models" / "rice.pth"
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model = models.convnext_small()
 
 numfeatures = model.classifier[2].in_features
 model.classifier[2] = nn.Linear(numfeatures, 3)
 
-model.load_state_dict(torch.load("rice.pth", map_location=device))
+if not MODEL_PATH.exists():
+    raise FileNotFoundError(f"Model checkpoint not found: {MODEL_PATH}")
+
+model.load_state_dict(torch.load(MODEL_PATH, map_location=device))
 model = model.to(device)
 model.eval()
 
@@ -19,10 +26,10 @@ result_map = {
     'unknown': 'Unknown'
 }
 
-if os.path.exists('rice.pth'):
+if MODEL_PATH.exists():
     print("Model loaded successfully.")
 else:
-    print("rice.pth file not found.")
+    print(f"Model file not found: {MODEL_PATH}")
 
 transform = transforms.Compose([  
     transforms.Resize(256, interpolation=transforms.InterpolationMode.BICUBIC),

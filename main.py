@@ -1,5 +1,6 @@
 import streamlit as st
-from detector import predict_image, model, class_names
+from src.detector import predict_image, model, class_names
+from export import generate_png, generate_pdf
 
 st.set_page_config(page_title="PALAi", page_icon="🌿", layout="wide")
 
@@ -145,6 +146,34 @@ with col_result:
             </div>
         </div>
         """, unsafe_allow_html=True) #Currently working on with recommendations
+
+        st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
+
+        dl_col1, dl_col2 = st.columns(2)
+
+        with dl_col1:
+            if image_file is not None:
+                image_file.seek(0)
+                png_buf = generate_png(image_file, label, confidence)
+                st.download_button(
+                    label="⬇️ Download as PNG",
+                    data=png_buf,
+                    file_name="palai_result.png",
+                    mime="image/png",
+                    use_container_width=True,
+                )
+
+        with dl_col2:
+            if image_file is not None:
+                image_file.seek(0)
+                pdf_buf = generate_pdf(image_file, label, confidence)
+                st.download_button(
+                    label="⬇️ Download as PDF",
+                    data=pdf_buf,
+                    file_name="palai_result.pdf",
+                    mime="application/pdf",
+                    use_container_width=True,
+                )
 
 # Analyze Button
 st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
