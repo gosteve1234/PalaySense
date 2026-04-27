@@ -1,5 +1,6 @@
 import streamlit as st
 import time
+import io
 from datetime import datetime
 from src.detector import predict_image, model, class_names
 from src.export import generate_png, generate_pdf
@@ -208,12 +209,16 @@ with btn_col:
 
             image_file.seek(0)
             label, confidence, recommendation = predict_image(image_file, model, class_names)
+            image_file.seek(0)
+            image_bytes = image_file.read()
             st.session_state.result = (label, confidence, recommendation)
             st.session_state.scan_history.insert(0, {
                 "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                 "file_name": image_file.name,
                 "label": label,
                 "confidence": float(confidence),
+                "recommendation": recommendation,
+                "image_bytes": image_bytes,
             })
             st.session_state.scan_history = st.session_state.scan_history[:15]
             progress.progress(100, text="Scan complete")
@@ -243,20 +248,43 @@ if st.session_state.show_history:
         st.info("No past scans yet. Analyze an image to start your history.")
     else:
         for i, item in enumerate(st.session_state.scan_history, start=1):
-            st.markdown(
-                f"""
-                <div style="background:#fff;border:1px solid #e5e5e0;border-radius:10px;
-                     padding:12px 14px;margin-bottom:8px;">
-                    <p style="margin:0;font-size:13px;font-weight:600;color:#1a1a16;">
-                        #{i} • {item['label']} • {item['confidence']:.1f}%
-                    </p>
-                    <p style="margin:4px 0 0 0;font-size:12px;color:#6b6b65;">
-                        {item['file_name']} • {item['timestamp']}
-                    </p>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
+            hist_info_col, hist_pdf_col = st.columns([5, 1], gap="small")
+
+            with hist_info_col:
+                st.markdown(
+                    f"""
+                    <div style="background:#fff;border:1px solid #e5e5e0;border-radius:10px;
+                         padding:12px 14px;margin-bottom:8px;">
+                        <p style="margin:0;font-size:13px;font-weight:600;color:#1a1a16;">
+                            #{i} • {item['label']} • {item['confidence']:.1f}%
+                        </p>
+                        <p style="margin:4px 0 0 0;font-size:12px;color:#6b6b65;">
+                            {item['file_name']} • {item['timestamp']}
+                        </p>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
+
+            with hist_pdf_col:
+                if item.get("image_bytes"):
+                    past_pdf_buf = generate_pdf(
+                        io.BytesIO(item["image_bytes"]),
+                        item["label"],
+                        item["confidence"],
+                        item.get("recommendation", []),
+                    )
+                    safe_file_name = item.get("file_name", f"scan_{i}").rsplit(".", 1)[0]
+                    st.download_button(
+                        label="⬇️ PDF",
+                        data=past_pdf_buf,
+                        file_name=f"{safe_file_name}_result.pdf",
+                        mime="application/pdf",
+                        key=f"history_pdf_{i}_{item['timestamp']}",
+                        use_container_width=True,
+                    )
+                else:
+                    st.caption("No file")
 st.markdown("""
 <div class="hiw-box">
     <p class="hiw-title">How it works</p>
