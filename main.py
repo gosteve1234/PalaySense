@@ -1,9 +1,15 @@
 import streamlit as st
 import time
+from datetime import datetime
 from src.detector import predict_image, model, class_names
 from src.export import generate_png, generate_pdf
 
 st.set_page_config(page_title="PALAi", page_icon="🌿", layout="wide")
+
+if "scan_history" not in st.session_state:
+    st.session_state.scan_history = []
+if "show_history" not in st.session_state:
+    st.session_state.show_history = False
 
 st.markdown("""
 <style>
@@ -132,10 +138,8 @@ with col_result:
         </div>
         """, unsafe_allow_html=True)
     else:
-        # FIX 1: unpack recommendation too
         label, confidence, recommendation = st.session_state.result
         bar_width = int(confidence)
-        # Build recommendation list HTML
         rec_items = "".join([f"<li style='margin-bottom:6px;'>{r}</li>" for r in recommendation])
         st.markdown(f"""
         <div class="result-box">
@@ -162,7 +166,6 @@ with col_result:
         with dl_col1:
             if image_file is not None:
                 image_file.seek(0)
-                # FIX 2: pass recommendation to generate_png
                 png_buf = generate_png(image_file, label, confidence, recommendation)
                 st.download_button(
                     label="⬇️ Download as PNG",
@@ -175,7 +178,6 @@ with col_result:
         with dl_col2:
             if image_file is not None:
                 image_file.seek(0)
-                # FIX 3: pass recommendation to generate_pdf
                 pdf_buf = generate_pdf(image_file, label, confidence, recommendation)
                 st.download_button(
                     label="⬇️ Download as PDF",
@@ -188,7 +190,7 @@ with col_result:
 # Analyze Button
 st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
 
-btn_col, _ = st.columns([1, 1])
+btn_col, reset_col, history_col = st.columns([2, 1, 1])
 with btn_col:
     if st.button("Analyze Image →"):
         if image_file is None:
@@ -205,21 +207,56 @@ with btn_col:
                 time.sleep(0.15)
 
             image_file.seek(0)
-            # FIX 4: unpack recommendation from predict_image
             label, confidence, recommendation = predict_image(image_file, model, class_names)
             st.session_state.result = (label, confidence, recommendation)
+            st.session_state.scan_history.insert(0, {
+                "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "file_name": image_file.name,
+                "label": label,
+                "confidence": float(confidence),
+            })
+            st.session_state.scan_history = st.session_state.scan_history[:15]
             progress.progress(100, text="Scan complete")
             time.sleep(0.15)
             progress.empty()
             st.rerun()
 
 # Reset
-with _:
+with reset_col:
     if st.button("↺ Reset", key="reset"):
         st.session_state.pop("result", None)
         st.rerun()
 
-# How It Works
+with history_col:
+    if st.button("🕘 History", key="history"):
+        st.session_state.show_history = not st.session_state.show_history
+
+if st.session_state.show_history:
+    st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
+    st.markdown("""
+    <div class="hiw-box" style="margin-top:0;">
+        <p class="hiw-title">Recent Scan History</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    if not st.session_state.scan_history:
+        st.info("No past scans yet. Analyze an image to start your history.")
+    else:
+        for i, item in enumerate(st.session_state.scan_history, start=1):
+            st.markdown(
+                f"""
+                <div style="background:#fff;border:1px solid #e5e5e0;border-radius:10px;
+                     padding:12px 14px;margin-bottom:8px;">
+                    <p style="margin:0;font-size:13px;font-weight:600;color:#1a1a16;">
+                        #{i} • {item['label']} • {item['confidence']:.1f}%
+                    </p>
+                    <p style="margin:4px 0 0 0;font-size:12px;color:#6b6b65;">
+                        {item['file_name']} • {item['timestamp']}
+                    </p>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
 st.markdown("""
 <div class="hiw-box">
     <p class="hiw-title">How it works</p>
