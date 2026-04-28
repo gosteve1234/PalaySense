@@ -77,25 +77,3 @@ def predict_image(image_dir, model, class_names):
             folder_name = 'unknown'
         recommendation = get_recommendation(folder_name)
         return result_map.get(folder_name, 'Unknown'), confidence_score, recommendation
-
-if os.path.exists(image_dir):
-    image_files = [f for f in os.listdir(image_dir) if f.lower().endswith(('.jpg', '.jpeg', '.png'))]
-
-    if not image_files:
-        print(f"No image files found in {image_dir}")
-    else:
-        print(f"Found {len(image_files)} images\n")
-        for img_file in image_files:
-            img_full_path = os.path.join(image_dir, img_file)
-            try:
-                result, confidence, recommendation = predict_image(img_full_path, model, class_names)
-                print(f"Image: {img_file}")
-                print(f"Classification: {result}, Confidence: {confidence:.2f}%")
-                print("Recommendations:")
-                for r in recommendation:
-                    print(f"  {r}")
-                print()
-            except Exception as e:
-                print("Error processing")
-else:
-    print("Path does not exist")
