@@ -3,28 +3,59 @@ import torch.nn as nn
 from torchvision import models, transforms
 from PIL import Image
 import os
+from pathlib import Path
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+MODEL_PATH = BASE_DIR / "models" / "rice.pth"
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model = models.convnext_small()
 
 numfeatures = model.classifier[2].in_features
 model.classifier[2] = nn.Linear(numfeatures, 3)
 
-model.load_state_dict(torch.load("rice.pth", map_location=device))
+if not MODEL_PATH.exists():
+    raise FileNotFoundError(f"Model checkpoint not found: {MODEL_PATH}")
+
+model.load_state_dict(torch.load(MODEL_PATH, map_location=device))
 model = model.to(device)
 model.eval()
 
-result_map = { 
+result_map = {
     'brown_spot': 'Positive (Brown Spot)',
     'healthy': 'Negative (Healthy)',
     'unknown': 'Unknown'
 }
 
-if os.path.exists('rice.pth'):
+recommendations = {
+    'brown_spot': [
+        "🍄 Spray fungicide (Mancozeb or Propiconazole) on affected plants immediately — best applied early morning or late afternoon.",
+        "🌾 Stop or reduce urea fertilizer application. Too much nitrogen weakens the plant and worsens the disease.",
+        "💧 Keep water level at 2–5 cm in the field. Do not let the soil dry out completely.",
+        "🚜 After harvest, burn or bury leftover plant stalks to stop the disease from spreading to the next crop.",
+        "🌱 For your next planting, switch to resistant varieties like NSIC Rc222 or PSB Rc18 to reduce the risk of brown spot.",
+        "🔄 Consider crop rotation next season — plant mung beans or corn to break the disease cycle and let the soil recover.",
+    ],
+    'healthy': [
+        "✅ Your rice plant is healthy — keep up the good work!",
+        "👁️ Check your field weekly for early signs of brown spot: oval brown patches with yellow edges on the leaves.",
+        "💧 Maintain steady water levels and continue your regular fertilizer schedule.",
+    ],
+    'unknown': [
+        "⚠️ The image is not clear enough for a confident result.",
+        "📷 Try taking a new photo in a well-lit area and make sure the rice leaf is clearly visible.",
+        "🔍 If you suspect your plant is sick, reach out to your local agriculturist or extension worker for help.",
+    ]
+}
+
+def get_recommendation(folder_name):
+    return recommendations.get(folder_name, recommendations['unknown'])
+
+if MODEL_PATH.exists():
     print("Model loaded successfully.")
 else:
-    print("rice.pth file not found.")
+    print(f"Model file not found: {MODEL_PATH}")
 
-transform = transforms.Compose([  
+transform = transforms.Compose([
     transforms.Resize(256, interpolation=transforms.InterpolationMode.BICUBIC),
     transforms.CenterCrop(224),
     transforms.ToTensor(),
@@ -44,22 +75,5 @@ def predict_image(image_dir, model, class_names):
         folder_name = class_names[predicted]
         if confidence_score < 75:
             folder_name = 'unknown'
-        return result_map.get(folder_name, 'Unknown'), confidence_score
-
-if os.path.exists(image_dir):
-    image_files = [f for f in os.listdir(image_dir) if f.lower().endswith(('.jpg', '.jpeg', '.png'))]
-    
-    if not image_files:
-        print(f"No image files found in {image_dir}")
-    else:
-        print(f"Found {len(image_files)} images\n")
-        for img_file in image_files:
-            img_full_path = os.path.join(image_dir, img_file)
-            try:
-                result, confidence = predict_image(img_full_path, model, class_names)
-                print(f"Image: {img_file}")
-                print(f"Classfication: {result}, Confidence: {confidence:.2f}%\n")
-            except Exception as e:
-                print("Error processing")
-else:
-    print("Path does not exist")
+        recommendation = get_recommendation(folder_name)
+        return result_map.get(folder_name, 'Unknown'), confidence_score, recommendation
