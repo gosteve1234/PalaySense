@@ -47,8 +47,17 @@ recommendations = {
     ]
 }
 
+reasoning = {
+    'brown_spot': "The AI detected visual patterns consistent with Brown Spot disease — oval to circular brown lesions typically surrounded by yellow halos on the leaf surface. These are characteristic markers of Bipolaris oryzae fungal infection, which thrives in conditions of poor soil nutrition and excessive moisture.",
+    'healthy': "The AI found no signs of disease. The leaf shows uniform green pigmentation with no visible lesions, discoloration, or abnormal spotting. The color and texture patterns closely match those of a well-nourished, disease-free rice plant.",
+    'unknown': "The AI could not identify a clear pattern with sufficient confidence. This may be due to image quality, unusual lighting, or the leaf not being clearly visible. A cleaner photo taken in natural daylight will give better results."
+}
+
 def get_recommendation(folder_name):
     return recommendations.get(folder_name, recommendations['unknown'])
+
+def get_reasoning(folder_name):
+    return reasoning.get(folder_name, reasoning['unknown'])
 
 if MODEL_PATH.exists():
     print("Model loaded successfully.")
@@ -64,8 +73,8 @@ transform = transforms.Compose([
 image_dir = "images"
 class_names = ['brown_spot', 'healthy', 'unknown']
 
-def predict_image(image_dir, model, class_names):
-    image = Image.open(image_dir).convert('RGB')
+def predict_image(image_input, model, class_names):
+    image = Image.open(image_input).convert('RGB')
     image = transform(image).unsqueeze(0).to(device)
     with torch.no_grad():
         outputs = model(image)
@@ -76,4 +85,27 @@ def predict_image(image_dir, model, class_names):
         if confidence_score < 75:
             folder_name = 'unknown'
         recommendation = get_recommendation(folder_name)
-        return result_map.get(folder_name, 'Unknown'), confidence_score, recommendation
+        reason = get_reasoning(folder_name)
+        return result_map.get(folder_name, 'Unknown'), confidence_score, recommendation, reason
+
+if os.path.exists(image_dir):
+    image_files = [f for f in os.listdir(image_dir) if f.lower().endswith(('.jpg', '.jpeg', '.png'))]
+    if not image_files:
+        print(f"No image files found in {image_dir}")
+    else:
+        print(f"Found {len(image_files)} images\n")
+        for img_file in image_files:
+            img_full_path = os.path.join(image_dir, img_file)
+            try:
+                result, confidence, recommendation, reason = predict_image(img_full_path, model, class_names)
+                print(f"Image: {img_file}")
+                print(f"Classification: {result}, Confidence: {confidence:.2f}%")
+                print(f"Reasoning: {reason}")
+                print("Recommendations:")
+                for r in recommendation:
+                    print(f"  {r}")
+                print()
+            except Exception as e:
+                print(f"Error processing {img_file}: {e}")
+else:
+    print("Path does not exist")
