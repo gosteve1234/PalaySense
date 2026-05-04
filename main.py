@@ -215,9 +215,8 @@ st.markdown("""
 # ── Hero ──
 st.markdown("""
 <div class="hero">
-    <div class="hero-tag">Rice Crop Health Analysis</div>
     <h1>Detect Brown Spots <em>Instantly</em></h1>
-    <p>Upload a photo of your rice plant and our AI will analyze it for brown spot disease — giving you results and actionable recommendations in seconds.</p>
+    <p>Upload a photo of your rice plant and our AI will analyze it for brown spot disease giving you results and actionable recommendations in seconds.</p>
 </div>
 """, unsafe_allow_html=True)
 
@@ -375,7 +374,8 @@ if not batch_mode:
                 st.rerun()
     with reset_col:
         if st.button("↺ Reset", key="reset"):
-            st.session_state.pop("result", None)
+            st.session_state.scan_history = []
+            st.session_state.show_history = False
             st.rerun()
     with history_col:
         if st.button("🕘 History", key="history"):
