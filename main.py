@@ -8,21 +8,25 @@ from src.export import generate_png, generate_pdf
 
 st.set_page_config(page_title="SpotSense", page_icon="🌿", layout="wide")
 
-# ── Session state ──
+# Session state
 for key, val in [
     ("scan_history", []),
     ("show_history", False),
     ("batch_mode", False),
     ("feedback", {}),
+    ("history_filter_count", "all"),
+    ("history_filter_status", "all"),
+    ("history_max_results", "all"),
 ]:
     if key not in st.session_state:
         st.session_state[key] = val
 
-# ── Helper: image to base64 ──
+# Helpers
 def img_to_b64(file_obj):
     file_obj.seek(0)
     return base64.b64encode(file_obj.read()).decode()
 
+# Styles
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
@@ -30,7 +34,6 @@ st.markdown("""
     .stApp { background: #f0f4eb; }
     footer, #MainMenu, header { visibility: hidden; }
 
-    /* ── Navbar ── */
     .navbar { display:flex; align-items:center; justify-content:space-between; padding:16px 0 22px 0; border-bottom:1.5px solid #d4e6b0; margin-bottom:32px; animation:fadeDown 0.5s ease both; }
     .nav-left { display:flex; align-items:center; gap:14px; }
     .nav-icon { width:40px; height:40px; background:linear-gradient(135deg,#2a5218,#4a8e28); border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:20px; box-shadow:0 4px 14px rgba(42,82,24,0.3); }
@@ -38,17 +41,14 @@ st.markdown("""
     .nav-sub { font-size:11px; color:#7a9a5a; margin-top:1px; }
     .nav-pill { background:#e4f0d0; border:1px solid #aed176; color:#3a6b1a; font-size:10px; font-weight:700; padding:5px 14px; border-radius:99px; letter-spacing:1.2px; }
 
-    /* ── Hero ── */
     .hero { text-align:center; padding:8px 0 40px 0; animation:fadeUp 0.6s ease both 0.1s; }
     .hero-tag { display:inline-block; background:#e4f0d0; border:1px solid #aed176; color:#3a6b1a; font-size:10px; font-weight:700; padding:5px 16px; border-radius:99px; letter-spacing:1.5px; text-transform:uppercase; margin-bottom:20px; }
     .hero h1 { font-size:44px; font-weight:700; color:#1a2e0f; letter-spacing:-2px; line-height:1.1; margin:0 0 18px 0; }
     .hero h1 em { font-style:normal; color:#4a8e28; }
     .hero p { font-size:15px; color:#6b8050; max-width:460px; margin:0 auto; line-height:1.75; }
 
-    /* ── Panel label ── */
     .panel-label { font-size:10px; font-weight:700; color:#8aaa60; letter-spacing:1.5px; text-transform:uppercase; margin-bottom:10px; }
 
-    /* ── Upload ── */
     div[data-testid="stFileUploader"] > label { display:none; }
     div[data-testid="stFileUploader"] section { border:2px dashed #c0d890 !important; border-radius:18px !important; background:#ffffff !important; padding:36px 32px !important; transition:all 0.25s ease !important; }
     div[data-testid="stFileUploader"] section:hover { border-color:#4a8e28 !important; background:#f4fae8 !important; box-shadow:0 8px 28px rgba(74,142,40,0.12) !important; }
@@ -58,7 +58,6 @@ st.markdown("""
 
 
 
-    /* ── Result card ── */
     .rcard { border-radius:22px; padding:28px 28px 24px; min-height:240px; position:relative; overflow:hidden; animation:fadeUp 0.55s cubic-bezier(.22,1,.36,1) both; box-shadow:0 12px 40px rgba(0,0,0,0.1); }
     .rcard::after { content:''; position:absolute; top:-60px; right:-60px; width:200px; height:200px; border-radius:50%; opacity:0.07; pointer-events:none; }
     .rcard-healthy { background:linear-gradient(140deg,#1b4a0c 0%,#2e7018 60%,#3d8e20 100%); border:1.5px solid rgba(255,255,255,0.1); }
@@ -75,7 +74,6 @@ st.markdown("""
     .rconf-light { font-size:13px; color:rgba(255,255,255,0.7); margin-bottom:6px; }
     .rconf-dark  { font-size:13px; color:#7a9a5a; margin-bottom:6px; }
 
-    /* Reasoning box */
     .reasoning-box-light { background:rgba(255,255,255,0.1); border-radius:10px; padding:10px 14px; margin-bottom:14px; font-size:12px; color:rgba(255,255,255,0.8); line-height:1.6; border-left:3px solid rgba(255,255,255,0.3); }
     .reasoning-box-dark  { background:#f4fae8; border-radius:10px; padding:10px 14px; margin-bottom:14px; font-size:12px; color:#4a6030; line-height:1.6; border-left:3px solid #aed176; }
 
@@ -98,22 +96,11 @@ st.markdown("""
     .rrec-num-light { background:rgba(255,255,255,0.15); color:rgba(255,255,255,0.75); }
     .rrec-num-dark  { background:#e4f0d0; color:#3a6b1a; }
 
-    /* Feedback */
-    .feedback-row { display:flex; align-items:center; gap:10px; margin-top:14px; padding-top:14px; border-top:1px solid rgba(255,255,255,0.12); }
-    .feedback-row-dark { border-top-color:#d4e6b0; }
-    .feedback-label-light { font-size:11px; color:rgba(255,255,255,0.5); }
-    .feedback-label-dark  { font-size:11px; color:#8aaa60; }
-    .fb-btn { background:rgba(255,255,255,0.12); border:none; border-radius:8px; padding:6px 14px; font-size:16px; cursor:pointer; transition:all 0.15s ease; }
-    .fb-btn:hover { background:rgba(255,255,255,0.22); transform:scale(1.1); }
-    .fb-btn-dark { background:#f0f4eb; }
-    .fb-btn-dark:hover { background:#e4f0d0; }
-
-    /* Empty state */
+    
     .empty-card { background:#fff; border:1.5px solid #d4e6b0; border-radius:22px; min-height:240px; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:32px; box-shadow:0 4px 20px rgba(0,0,0,0.05); }
     .empty-icon { width:68px; height:68px; background:#e4f0d0; border-radius:20px; display:flex; align-items:center; justify-content:center; font-size:30px; margin-bottom:16px; }
     .empty-text { font-size:13px; color:#9ab878; font-weight:500; line-height:1.6; }
 
-    /* Batch result card */
     .batch-card { background:#fff; border:1.5px solid #d4e6b0; border-radius:18px; padding:20px; margin-bottom:16px; animation:fadeUp 0.4s ease both; box-shadow:0 4px 16px rgba(0,0,0,0.06); display:flex; gap:16px; align-items:flex-start; }
     .batch-card-diseased { border-color:#e8a090; background:#fff8f6; }
     .batch-card-healthy  { border-color:#a8d888; background:#f6fbf0; }
@@ -129,13 +116,11 @@ st.markdown("""
     .batch-bar-fill-diseased { background:#c44a1a; }
     .batch-reasoning { font-size:12px; color:#5a7040; background:#f4fae8; border-radius:8px; padding:8px 12px; border-left:3px solid #aed176; line-height:1.6; margin-bottom:10px; }
 
-    /* Buttons */
     div[data-testid="stButton"] > button { background:linear-gradient(135deg,#2a5218,#3d8020) !important; color:white !important; border:none !important; border-radius:12px !important; padding:14px 24px !important; font-size:14px !important; font-weight:600 !important; width:100% !important; font-family:'Sora',sans-serif !important; letter-spacing:-0.2px !important; box-shadow:0 4px 16px rgba(42,82,24,0.28) !important; transition:all 0.2s ease !important; }
     div[data-testid="stButton"] > button:hover { background:linear-gradient(135deg,#1e3e12,#2e6018) !important; box-shadow:0 6px 22px rgba(42,82,24,0.38) !important; transform:translateY(-1px) !important; }
     div[data-testid="stDownloadButton"] > button { background:#fff !important; color:#2a5218 !important; border:1.5px solid #c0d890 !important; border-radius:10px !important; padding:10px 16px !important; font-size:13px !important; font-weight:600 !important; width:100% !important; font-family:'Sora',sans-serif !important; transition:all 0.2s ease !important; }
     div[data-testid="stDownloadButton"] > button:hover { background:#f4fae8 !important; border-color:#4a8e28 !important; transform:translateY(-1px) !important; }
 
-    /* History */
     .hist-card { background:#fff; border:1px solid #ddecc0; border-radius:14px; padding:14px 16px; margin-bottom:10px; animation:fadeUp 0.3s ease both; transition:box-shadow 0.2s ease; }
     .hist-card:hover { box-shadow:0 4px 16px rgba(0,0,0,0.07); }
     .hist-label { font-size:13px; font-weight:600; color:#1a2e0f; margin:0 0 4px 0; }
@@ -145,7 +130,6 @@ st.markdown("""
     .hist-badge-healthy  { background:#e4f0d0; color:#2a5218; }
     .hist-badge-unknown  { background:#f0f0ec; color:#6b6b65; }
 
-    /* How it works */
     .hiw { background:#fff; border:1.5px solid #d4e6b0; border-radius:20px; padding:32px; margin-top:40px; }
     .hiw-label { font-size:10px; font-weight:700; color:#8aaa60; letter-spacing:1.5px; text-transform:uppercase; margin-bottom:24px; }
     .hiw-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:24px; }
@@ -154,7 +138,6 @@ st.markdown("""
     .hiw-step-t { font-size:14px; font-weight:600; color:#1a2e0f; margin-bottom:4px; }
     .hiw-step-s { font-size:12px; color:#8aaa60; line-height:1.55; }
 
-    /* ── Mobile responsiveness ── */
     @media (max-width: 768px) {
         .hero h1 { font-size:28px; letter-spacing:-1px; }
         .hero p { font-size:13px; }
@@ -171,14 +154,13 @@ st.markdown("""
         .nav-sub { display:none; }
     }
 
-    /* Animations */
     @keyframes fadeUp   { from{opacity:0;transform:translateY(18px)} to{opacity:1;transform:translateY(0)} }
     @keyframes fadeDown { from{opacity:0;transform:translateY(-12px)} to{opacity:1;transform:translateY(0)} }
     @keyframes barIn    { from{transform:scaleX(0)} to{transform:scaleX(1)} }
     .stAlert { border-radius:12px !important; }
+
 </style>
 
-<!-- Image preview modal -->
 <div id="imgModal" onclick="closeModal()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.82);z-index:9999;align-items:center;justify-content:center;cursor:zoom-out;">
     <span onclick="closeModal()" style="position:fixed;top:18px;right:28px;color:#fff;font-size:36px;font-weight:300;cursor:pointer;line-height:1;z-index:10000;">×</span>
     <img id="modalImg" src="" alt="Preview" style="max-width:90vw;max-height:90vh;border-radius:14px;box-shadow:0 20px 60px rgba(0,0,0,0.5);object-fit:contain;" onclick="event.stopPropagation()">
@@ -198,7 +180,7 @@ document.addEventListener('keydown', function(e) { if(e.key==='Escape') closeMod
 </script>
 """, unsafe_allow_html=True)
 
-# ── Navbar ──
+# Navbar
 st.markdown("""
 <div class="navbar">
     <div class="nav-left">
@@ -212,7 +194,7 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# ── Hero ──
+# Hero
 st.markdown("""
 <div class="hero">
     <h1>Detect Brown Spots <em>Instantly</em></h1>
@@ -220,7 +202,7 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# ── Mode toggle ──
+# Mode toggle
 mode_col, _ = st.columns([2, 4])
 with mode_col:
     batch_mode = st.toggle("📦 Batch Mode (multiple images)", value=st.session_state.batch_mode)
@@ -228,12 +210,11 @@ with mode_col:
 
 st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
 
-# ═══════════════════════════════
-# ── SINGLE MODE ──
-# ═══════════════════════════════
+# Single mode
 if not batch_mode:
     col_upload, col_result = st.columns([1, 1], gap="large")
 
+    # Upload panel
     with col_upload:
         st.markdown('<p class="panel-label">Upload Image</p>', unsafe_allow_html=True)
         image_file = st.file_uploader(
@@ -241,7 +222,6 @@ if not batch_mode:
             label_visibility="collapsed"
         )
         if image_file:
-            # ── Thumbnail in file tag ──
             b64 = img_to_b64(image_file)
             img_src = f"data:image/jpeg;base64,{b64}"
             st.markdown(f"""
@@ -257,6 +237,7 @@ if not batch_mode:
             </div>
             """, unsafe_allow_html=True)
 
+    # Result panel
     with col_result:
         st.markdown('<p class="panel-label">Detection Result</p>', unsafe_allow_html=True)
 
@@ -285,14 +266,8 @@ if not batch_mode:
                 for i, r in enumerate(recommendation, 1)
             )
 
-            # Feedback state
             fb_key = "single"
             fb = st.session_state.feedback.get(fb_key, None)
-            fb_html = (
-                '<div class="feedback-row' + (' feedback-row-dark' if tc=='dark' else '') + '">'
-                '<span class="feedback-label-' + tc + '">Was this result helpful?</span>'
-                '</div>'
-            )
 
             card = (
                 '<div class="rcard ' + card_cls + '">'
@@ -309,7 +284,7 @@ if not batch_mode:
             )
             st.markdown(card, unsafe_allow_html=True)
 
-            # ── Feedback buttons ──
+            # Feedback
             st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
             fb_col1, fb_col2, fb_col3 = st.columns([2, 1, 1])
             with fb_col1:
@@ -325,6 +300,7 @@ if not batch_mode:
                     st.toast("Thanks! We'll use this to improve. 🔧")
                     st.rerun()
 
+            # Downloads
             st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
             dl_col1, dl_col2 = st.columns(2)
             with dl_col1:
@@ -340,10 +316,10 @@ if not batch_mode:
                     st.download_button("⬇️ Download PDF", data=pdf_buf,
                         file_name="palai_result.pdf", mime="application/pdf", use_container_width=True)
 
-    # ── Single mode action buttons ──
+    # Actions
     st.markdown("<div style='height:14px'></div>", unsafe_allow_html=True)
-    btn_col, reset_col, history_col = st.columns([2, 1, 1])
-    with btn_col:
+    action_col, reset_col, history_col = st.columns([3, 1, 1], gap="small")
+    with action_col:
         if st.button("Analyze Image →"):
             if image_file is None:
                 st.error("Please upload an image first.")
@@ -373,18 +349,60 @@ if not batch_mode:
                 progress.empty()
                 st.rerun()
     with reset_col:
-        if st.button("↺ Reset", key="reset"):
+        if st.button("↺ Reset", key="reset", use_container_width=True):
             st.session_state.scan_history = []
             st.session_state.show_history = False
             st.rerun()
     with history_col:
-        if st.button("🕘 History", key="history"):
+        if st.button("🕘 History", key="history", use_container_width=True):
             st.session_state.show_history = not st.session_state.show_history
 
-# ═══════════════════════════════
-# ── BATCH MODE ──
-# ═══════════════════════════════
+    # Recent results
+    if st.session_state.scan_history:
+        st.markdown("<div style='height:20px'></div>", unsafe_allow_html=True)
+        st.markdown("""
+        <div style="background:#fff;border:1.5px solid #d4e6b0;border-radius:20px;padding:20px;margin-top:20px;">
+            <div style="font-size:10px;font-weight:700;color:#8aaa60;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:16px;">Recent Results (Last 3)</div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        recent_scans = st.session_state.scan_history[:3]
+        
+        rec_cols = st.columns(3)
+        
+        for idx, (col, item) in enumerate(zip(rec_cols, recent_scans)):
+            with col:
+                if "Brown Spot" in item["label"]:
+                    badge_cls = "hist-badge-diseased"
+                    bg_color = "#fff8f6"
+                    border_color = "#e8a090"
+                elif "Healthy" in item["label"]:
+                    badge_cls = "hist-badge-healthy"
+                    bg_color = "#f6fbf0"
+                    border_color = "#a8d888"
+                else:
+                    badge_cls = "hist-badge-unknown"
+                    bg_color = "#ffffff"
+                    border_color = "#d4e6b0"
+                
+                st.markdown(f"""
+                <div style="background:{bg_color};border:1.5px solid {border_color};border-radius:14px;padding:14px;text-align:center;height:160px;display:flex;flex-direction:column;justify-content:space-between;">
+                    <div>
+                        <div style="font-size:13px;font-weight:600;color:#1a2e0f;margin-bottom:6px;">
+                            <span class="hist-badge {badge_cls}">{item['label']}</span>
+                        </div>
+                        <div style="font-size:24px;font-weight:700;color:#1a2e0f;">{item['confidence']:.0f}%</div>
+                    </div>
+                    <div style="font-size:11px;color:#8aaa60;margin-top:8px;">
+                        <div>{item['file_name'][:20]}...</div>
+                        <div>{item['timestamp'].split(' ')[1]}</div>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+
+# Batch mode
 else:
+    # Batch upload
     st.markdown('<p class="panel-label">Upload Multiple Images</p>', unsafe_allow_html=True)
     batch_files = st.file_uploader(
         "Upload multiple", type=["png", "jpg", "jpeg", "webp"],
@@ -404,6 +422,7 @@ else:
     with batch_btn_col:
         run_batch = st.button("Analyze All Images →", key="batch_analyze")
 
+    # Batch analysis
     if run_batch:
         if not batch_files:
             st.error("Please upload at least one image.")
@@ -426,7 +445,6 @@ else:
                         "reasoning": rsn,
                         "image_bytes": img_bytes,
                     })
-                    # Add to history
                     st.session_state.scan_history.insert(0, {
                         "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                         "file_name": f.name,
@@ -451,14 +469,13 @@ else:
             batch_progress.empty()
             st.rerun()
 
-    # ── Show batch results ──
+    # Batch results
     if "batch_results" in st.session_state and st.session_state.batch_results:
         results = st.session_state.batch_results
         total = len(results)
         diseased = sum(1 for r in results if "Brown Spot" in r["label"])
         healthy = sum(1 for r in results if "Healthy" in r["label"])
 
-        # Summary row
         st.markdown(f"""
         <div style="display:flex;gap:12px;margin:16px 0;flex-wrap:wrap;">
             <div style="background:#fff;border:1.5px solid #d4e6b0;border-radius:12px;padding:12px 20px;flex:1;min-width:100px;text-align:center;">
@@ -476,60 +493,61 @@ else:
         </div>
         """, unsafe_allow_html=True)
 
-        for i, r in enumerate(results):
-            if "Brown Spot" in r["label"]:
-                bc, bb = "batch-card-diseased", "batch-badge-diseased"
-                bar_cls = "batch-bar-fill-diseased"
-            elif "Healthy" in r["label"]:
-                bc, bb = "batch-card-healthy", "batch-badge-healthy"
-                bar_cls = ""
-            else:
-                bc, bb = "", "batch-badge-unknown"
-                bar_cls = ""
+        filtered_results = results.copy()
 
-            bw = min(int(r["confidence"]), 100)
+        with st.container(height=620, border=False):
+            for i, r in enumerate(filtered_results):
+                if "Brown Spot" in r["label"]:
+                    bc, bb = "batch-card-diseased", "batch-badge-diseased"
+                    bar_cls = "batch-bar-fill-diseased"
+                elif "Healthy" in r["label"]:
+                    bc, bb = "batch-card-healthy", "batch-badge-healthy"
+                    bar_cls = ""
+                else:
+                    bc, bb = "", "batch-badge-unknown"
+                    bar_cls = ""
 
-            # Image preview
-            img_preview = ""
-            if r.get("image_bytes"):
-                b64 = base64.b64encode(r["image_bytes"]).decode()
-                img_src = f"data:image/jpeg;base64,{b64}"
-                fname_safe = r["file_name"]
-                img_preview = (
-                    '<div style="width:110px;height:110px;flex-shrink:0;border-radius:12px;overflow:hidden;cursor:pointer;" ' +
-                    'onclick="openModal('' + img_src + '')" title="Click to preview">' +
-                    '<img src="' + img_src + '" alt="' + fname_safe + '" style="width:100%;height:100%;object-fit:cover;"></div>'
-                )
+                bw = min(int(r["confidence"]), 100)
 
-            st.markdown(f"""
-            <div class="batch-card {bc}">
-                <div style="flex:1;min-width:0;">
-                    <div class="batch-header">
-                        <span class="batch-fname">{r['file_name']}</span>
-                        <span class="batch-badge {bb}">{r['label']}</span>
-                    </div>
-                    <div class="batch-conf">Confidence: {r['confidence']:.1f}%</div>
-                    <div class="batch-bar-bg"><div class="batch-bar-fill {bar_cls}" style="width:{bw}%;"></div></div>
-                    <div class="batch-reasoning"><strong>AI Reasoning:</strong> {r['reasoning']}</div>
-                </div>
-                {img_preview}
-            </div>
-            """, unsafe_allow_html=True)
-
-            # Download PDF per result
-            if r.get("image_bytes"):
-                dl_col, _ = st.columns([1, 3])
-                with dl_col:
-                    pdf_buf = generate_pdf(
-                        io.BytesIO(r["image_bytes"]),
-                        r["label"], r["confidence"], r["recommendation"]
+                img_preview = ""
+                if r.get("image_bytes"):
+                    b64 = base64.b64encode(r["image_bytes"]).decode()
+                    img_src = f"data:image/jpeg;base64,{b64}"
+                    fname_safe = r["file_name"]
+                    img_preview = (
+                        '<div style="width:110px;height:110px;flex-shrink:0;border-radius:12px;overflow:hidden;cursor:pointer;" ' +
+                        'onclick="openModal('' + img_src + '')" title="Click to preview">' +
+                        '<img src="' + img_src + '" alt="' + fname_safe + '" style="width:100%;height:100%;object-fit:cover;"></div>'
                     )
-                    safe_name = r["file_name"].rsplit(".", 1)[0]
-                    st.download_button(f"⬇️ PDF — {r['file_name']}", data=pdf_buf,
-                        file_name=f"{safe_name}_result.pdf", mime="application/pdf",
-                        key=f"batch_dl_{i}", use_container_width=True)
 
-# ── History Panel ──
+                st.markdown(f"""
+                <div class="batch-card {bc}">
+                    <div style="flex:1;min-width:0;">
+                        <div class="batch-header">
+                            <span class="batch-fname">{r['file_name']}</span>
+                            <span class="batch-badge {bb}">{r['label']}</span>
+                        </div>
+                        <div class="batch-conf">Confidence: {r['confidence']:.1f}%</div>
+                        <div class="batch-bar-bg"><div class="batch-bar-fill {bar_cls}" style="width:{bw}%;"></div></div>
+                        <div class="batch-reasoning"><strong>AI Reasoning:</strong> {r['reasoning']}</div>
+                    </div>
+                    {img_preview}
+                </div>
+                """, unsafe_allow_html=True)
+
+                if r.get("image_bytes"):
+                    dl_col, _ = st.columns([1, 3])
+                    with dl_col:
+                        pdf_buf = generate_pdf(
+                            io.BytesIO(r["image_bytes"]),
+                            r["label"], r["confidence"], r["recommendation"]
+                        )
+                        safe_name = r["file_name"].rsplit(".", 1)[0]
+                        st.download_button(f"⬇️ PDF — {r['file_name']}", data=pdf_buf,
+                            file_name=f"{safe_name}_result.pdf", mime="application/pdf",
+                            key=f"batch_dl_{i}", use_container_width=True)
+
+# History panel
 if st.session_state.get("show_history", False):
     st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
     st.markdown("""
@@ -537,40 +555,115 @@ if st.session_state.get("show_history", False):
         <div class="hiw-label">Recent Scan History</div>
     </div>
     """, unsafe_allow_html=True)
+    
     if not st.session_state.scan_history:
         st.info("No scans yet. Analyze an image to start your history.")
     else:
-        for i, item in enumerate(st.session_state.scan_history, start=1):
-            hist_col, pdf_col = st.columns([5, 1], gap="small")
-            if "Brown Spot" in item["label"]:
-                badge_cls = "hist-badge-diseased"
-            elif "Healthy" in item["label"]:
-                badge_cls = "hist-badge-healthy"
-            else:
-                badge_cls = "hist-badge-unknown"
-            with hist_col:
-                st.markdown(f"""
-                <div class="hist-card">
-                    <p class="hist-label">
-                        <span class="hist-badge {badge_cls}">{item['label']}</span>
-                        &nbsp; {item['confidence']:.1f}% confidence
-                    </p>
-                    <p class="hist-meta">{item['file_name']} &nbsp;·&nbsp; {item['timestamp']}</p>
-                </div>
-                """, unsafe_allow_html=True)
-            with pdf_col:
-                if item.get("image_bytes"):
-                    past_pdf = generate_pdf(
-                        io.BytesIO(item["image_bytes"]),
-                        item["label"], item["confidence"],
-                        item.get("recommendation", []),
-                    )
-                    safe_name = item.get("file_name", f"scan_{i}").rsplit(".", 1)[0]
-                    st.download_button("⬇️ PDF", data=past_pdf,
-                        file_name=f"{safe_name}_result.pdf", mime="application/pdf",
-                        key=f"hist_pdf_{i}_{item['timestamp']}", use_container_width=True)
+        # History filters
+        filter_col1, filter_col2, filter_col3 = st.columns([1, 1, 1], gap="small")
+        with filter_col1:
+            st.session_state.history_filter_count = st.selectbox(
+                "Filter by recency:",
+                options=["all", "today", "week", "month"],
+                format_func=lambda x: {
+                    "all": "All scans",
+                    "today": "Today",
+                    "week": "This week",
+                    "month": "Last month"
+                }.get(x, x),
+                key="hist_filter_count",
+                label_visibility="collapsed"
+            )
+        with filter_col2:
+            st.session_state.history_filter_status = st.selectbox(
+                "Filter by status:",
+                options=["all", "Healthy", "Brown Spot"],
+                format_func=lambda x: "All status" if x == "all" else x,
+                key="hist_filter_status",
+                label_visibility="collapsed"
+            )
+        with filter_col3:
+            st.session_state.history_max_results = st.selectbox(
+                "Max results:",
+                options=["all", "3", "6", "9"],
+                format_func=lambda x: "All results" if x == "all" else f"{x} results",
+                key="hist_max_filter",
+                label_visibility="collapsed"
+            )
+        
+        st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
+        
+        filtered_history = st.session_state.scan_history.copy()
+        
+        if st.session_state.history_filter_count != "all":
+            from datetime import timedelta
+            today = datetime.now().date()
+            
+            filtered_items = []
+            for item in filtered_history:
+                item_date = datetime.strptime(item["timestamp"], "%Y-%m-%d %H:%M:%S").date()
+                
+                if st.session_state.history_filter_count == "today":
+                    if item_date == today:
+                        filtered_items.append(item)
+                elif st.session_state.history_filter_count == "week":
+                    week_ago = today - timedelta(days=7)
+                    if item_date >= week_ago:
+                        filtered_items.append(item)
+                elif st.session_state.history_filter_count == "month":
+                    month_ago = today - timedelta(days=30)
+                    if item_date >= month_ago:
+                        filtered_items.append(item)
+            
+            filtered_history = filtered_items
+        
+        if st.session_state.history_filter_status != "all":
+            filtered_history = [
+                item for item in filtered_history
+                if st.session_state.history_filter_status in item["label"]
+            ]
+        
+        if not filtered_history:
+            st.info("No scans match the selected filters.")
+        else:
+            # History results
+            displayed_history = filtered_history.copy()
+            if st.session_state.history_max_results != "all":
+                max_count = int(st.session_state.history_max_results)
+                displayed_history = displayed_history[:max_count]
+            
+            with st.container(height=520, border=False):
+                for i, item in enumerate(displayed_history, start=1):
+                    hist_col, pdf_col = st.columns([5, 1], gap="small")
+                    if "Brown Spot" in item["label"]:
+                        badge_cls = "hist-badge-diseased"
+                    elif "Healthy" in item["label"]:
+                        badge_cls = "hist-badge-healthy"
+                    else:
+                        badge_cls = "hist-badge-unknown"
+                    with hist_col:
+                        st.markdown(f"""
+                        <div class="hist-card">
+                            <p class="hist-label">
+                                <span class="hist-badge {badge_cls}">{item['label']}</span>
+                                &nbsp; {item['confidence']:.1f}% confidence
+                            </p>
+                            <p class="hist-meta">{item['file_name']} &nbsp;·&nbsp; {item['timestamp']}</p>
+                        </div>
+                        """, unsafe_allow_html=True)
+                    with pdf_col:
+                        if item.get("image_bytes"):
+                            past_pdf = generate_pdf(
+                                io.BytesIO(item["image_bytes"]),
+                                item["label"], item["confidence"],
+                                item.get("recommendation", []),
+                            )
+                            safe_name = item.get("file_name", f"scan_{i}").rsplit(".", 1)[0]
+                            st.download_button("⬇️ PDF", data=past_pdf,
+                                file_name=f"{safe_name}_result.pdf", mime="application/pdf",
+                                key=f"hist_pdf_{i}_{item['timestamp']}", use_container_width=True)
 
-# ── How It Works ──
+# How it works
 st.markdown("""
 <div class="hiw">
     <div class="hiw-label">How it works</div>
