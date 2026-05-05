@@ -28,15 +28,15 @@ result_map = {
 
 recommendations = {
     'brown_spot': [
-        "🍄 Spray fungicide (Mancozeb or Propiconazole) on affected plants immediately — best applied early morning or late afternoon.",
+        "🍄 Spray fungicide (Mancozeb or Propiconazole) on affected plants immediately best applied early morning or late afternoon.",
         "🌾 Stop or reduce urea fertilizer application. Too much nitrogen weakens the plant and worsens the disease.",
         "💧 Keep water level at 2–5 cm in the field. Do not let the soil dry out completely.",
         "🚜 After harvest, burn or bury leftover plant stalks to stop the disease from spreading to the next crop.",
         "🌱 For your next planting, switch to resistant varieties like NSIC Rc222 or PSB Rc18 to reduce the risk of brown spot.",
-        "🔄 Consider crop rotation next season — plant mung beans or corn to break the disease cycle and let the soil recover.",
+        "🔄 Consider crop rotation next season plant mung beans or corn to break the disease cycle and let the soil recover.",
     ],
     'healthy': [
-        "✅ Your rice plant is healthy — keep up the good work!",
+        "✅ Your rice plant is healthy keep up the good work!",
         "👁️ Check your field weekly for early signs of brown spot: oval brown patches with yellow edges on the leaves.",
         "💧 Maintain steady water levels and continue your regular fertilizer schedule.",
     ],
@@ -47,13 +47,17 @@ recommendations = {
     ]
 }
 
+reasoning = {
+    'brown_spot': "The AI detected visual patterns consistent with Brown Spot disease oval to circular brown lesions typically surrounded by yellow halos on the leaf surface. These are characteristic markers of Bipolaris oryzae fungal infection, which thrives in conditions of poor soil nutrition and excessive moisture.",
+    'healthy': "The AI found no signs of disease. The leaf shows uniform green pigmentation with no visible lesions, discoloration, or abnormal spotting. The color and texture patterns closely match those of a well-nourished, disease-free rice plant.",
+    'unknown': "The AI could not identify a clear pattern with sufficient confidence. This may be due to image quality, unusual lighting, or the leaf not being clearly visible. A cleaner photo taken in natural daylight will give better results."
+}
+
 def get_recommendation(folder_name):
     return recommendations.get(folder_name, recommendations['unknown'])
 
-if MODEL_PATH.exists():
-    print("Model loaded successfully.")
-else:
-    print(f"Model file not found: {MODEL_PATH}")
+def get_reasoning(folder_name):
+    return reasoning.get(folder_name, reasoning['unknown'])
 
 transform = transforms.Compose([
     transforms.Resize(256, interpolation=transforms.InterpolationMode.BICUBIC),
@@ -64,8 +68,8 @@ transform = transforms.Compose([
 image_dir = "images"
 class_names = ['brown_spot', 'healthy', 'unknown']
 
-def predict_image(image_dir, model, class_names):
-    image = Image.open(image_dir).convert('RGB')
+def predict_image(image_input, model, class_names):
+    image = Image.open(image_input).convert('RGB')
     image = transform(image).unsqueeze(0).to(device)
     with torch.no_grad():
         outputs = model(image)
@@ -76,4 +80,5 @@ def predict_image(image_dir, model, class_names):
         if confidence_score < 75:
             folder_name = 'unknown'
         recommendation = get_recommendation(folder_name)
-        return result_map.get(folder_name, 'Unknown'), confidence_score, recommendation
+        reason = get_reasoning(folder_name)
+        return result_map.get(folder_name, 'Unknown'), confidence_score, recommendation, reason
