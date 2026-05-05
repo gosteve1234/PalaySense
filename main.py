@@ -24,7 +24,9 @@ for key, val in [
 # Helpers
 def img_to_b64(file_obj):
     file_obj.seek(0)
-    return base64.b64encode(file_obj.read()).decode()
+    data = file_obj.read()
+    file_obj.seek(0)
+    return base64.b64encode(data).decode()
 
 # Styles
 st.markdown("""
@@ -213,25 +215,43 @@ st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
 # Single mode
 if not batch_mode:
     col_upload, col_result = st.columns([1, 1], gap="large")
+    image_file = None
 
     # Upload panel
     with col_upload:
-        st.markdown('<p class="panel-label">Upload Image</p>', unsafe_allow_html=True)
-        image_file = st.file_uploader(
-            "Upload", type=["png", "jpg", "jpeg", "webp"],
-            label_visibility="collapsed"
+        st.markdown('<p class="panel-label">Image Source</p>', unsafe_allow_html=True)
+        input_source = st.radio(
+            "Image Source",
+            options=["Upload image", "Use camera"],
+            horizontal=True,
+            label_visibility="collapsed",
+            key="image_source"
         )
+        if input_source == "Upload image":
+            image_file = st.file_uploader(
+                "Upload", type=["png", "jpg", "jpeg", "webp"],
+                label_visibility="collapsed",
+                key="upload_image"
+            )
+        else:
+            image_file = st.camera_input(
+                "Camera",
+                label_visibility="collapsed",
+                key="camera_image"
+            )
         if image_file:
             b64 = img_to_b64(image_file)
-            img_src = f"data:image/jpeg;base64,{b64}"
+            image_name = image_file.name or "camera_capture.jpg"
+            mime_type = image_file.type or "image/jpeg"
+            img_src = f"data:{mime_type};base64,{b64}"
             st.markdown(f"""
             <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;margin-top:12px;
                  background:#fff;border:1.5px solid #c0d890;border-radius:12px;cursor:pointer;"
                  onclick="openModal('{img_src}')" title="Click to preview full image">
-                <img src="{img_src}" alt="{image_file.name}"
+                <img src="{img_src}" alt="{image_name}"
                      style="width:48px;height:48px;object-fit:cover;border-radius:8px;flex-shrink:0;">
                 <div>
-                    <div style="font-size:13px;font-weight:600;color:#1a2e0f;">{image_file.name}</div>
+                    <div style="font-size:13px;font-weight:600;color:#1a2e0f;">{image_name}</div>
                     <div style="font-size:11px;color:#9ab878;margin-top:2px;">Click to preview</div>
                 </div>
             </div>
@@ -322,7 +342,7 @@ if not batch_mode:
     with action_col:
         if st.button("Analyze Image →"):
             if image_file is None:
-                st.error("Please upload an image first.")
+                st.error("Please add an image first.")
             else:
                 progress = st.progress(0, text="Initializing scan...")
                 for pct, msg in [(20,"Preparing image..."),(45,"Extracting features..."),(75,"Running AI model..."),(95,"Finalizing result...")]:
@@ -332,11 +352,12 @@ if not batch_mode:
                 label, confidence, recommendation, reasoning_text = predict_image(image_file, model, class_names)
                 image_file.seek(0)
                 image_bytes = image_file.read()
+                image_name = image_file.name or "camera_capture.jpg"
                 st.session_state.result = (label, confidence, recommendation, reasoning_text)
                 st.session_state.feedback.pop("single", None)
                 st.session_state.scan_history.insert(0, {
                     "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                    "file_name": image_file.name,
+                    "file_name": image_name,
                     "label": label,
                     "confidence": float(confidence),
                     "recommendation": recommendation,
@@ -672,7 +693,7 @@ st.markdown("""
             <div class="hiw-num">1</div>
             <div>
                 <div class="hiw-step-t">Upload a Photo</div>
-                <div class="hiw-step-s">Take a clear photo of your rice leaf and upload it here.</div>
+                <div class="hiw-step-s">Upload a clear photo or snap one with your camera.</div>
             </div>
         </div>
         <div class="hiw-step">
