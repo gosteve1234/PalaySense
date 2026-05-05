@@ -1,4 +1,4 @@
-# 🌿 PALAi — Brown Spot Detection
+# 🌿 SpotSense — Brown Spot Detection
 
 > AI-powered plant disease detector that identifies brown spot from images
 
@@ -16,7 +16,7 @@
 
 ## 🖥️ Demo
 
-(SCREENSHOT/GIF)
+![SpotSense Demo](assets/demo.gif)
 
 ---
 
