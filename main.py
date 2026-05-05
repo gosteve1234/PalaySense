@@ -204,7 +204,7 @@ st.markdown("""
     <div class="nav-left">
         <div class="nav-icon">🌿</div>
         <div>
-            <div class="nav-title">PALAi</div>
+            <div class="nav-title">SpotSense</div>
             <div class="nav-sub">Brown Spot Detection System</div>
         </div>
     </div>
