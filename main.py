@@ -6,7 +6,7 @@ from datetime import datetime
 from src.detector import predict_image, model, class_names
 from src.export import generate_png, generate_pdf
 
-st.set_page_config(page_title="PALAi", page_icon="🌿", layout="wide")
+st.set_page_config(page_title="SpotSense", page_icon="🌿", layout="wide")
 
 # ── Session state ──
 for key, val in [
