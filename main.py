@@ -360,7 +360,7 @@ if not batch_mode:
     st.markdown("<div style='height:14px'></div>", unsafe_allow_html=True)
     reset_col, history_col = st.columns([1, 1], gap="small")
     with reset_col:
-        if st.button("↺ Reset", key="reset", use_container_width=True):
+        if st.button("↺ Clear History", key="reset", use_container_width=True):
             st.session_state.scan_history = []
             st.session_state.show_history = False
             st.session_state.pop('current_image_hash', None)
