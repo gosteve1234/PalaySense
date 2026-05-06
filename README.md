@@ -2,7 +2,6 @@
 
 > AI-powered plant disease detector that identifies brown spot from images
 
-
 ---
 
 ## ✨ Features
@@ -17,7 +16,3 @@
 ## 🖥️ Demo
 
 ![SpotSense Demo](assets/demo.gif)
-
----
-
-## Getting Started
