@@ -279,7 +279,6 @@ if not batch_mode:
                      style="width:48px;height:48px;object-fit:cover;border-radius:8px;flex-shrink:0;">
                 <div>
                     <div style="font-size:13px;font-weight:600;color:#1a2e0f;">{image_name}</div>
-                    <div style="font-size:11px;color:#9ab878;margin-top:2px;">Click to preview</div>
                 </div>
             </div>
             """, unsafe_allow_html=True)
