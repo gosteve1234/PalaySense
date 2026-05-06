@@ -340,23 +340,7 @@ if not batch_mode:
                 '</div>'
             )
             st.markdown(card, unsafe_allow_html=True)
-
-            # Feedback
-            st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
-            fb_col1, fb_col2, fb_col3 = st.columns([2, 1, 1])
-            with fb_col1:
-                st.markdown('<p style="font-size:12px;color:#8aaa60;margin:10px 0 0 0;">Was this result helpful?</p>', unsafe_allow_html=True)
-            with fb_col2:
-                if st.button("👍" + (" ✓" if fb == "up" else ""), key="fb_up", help="Yes, helpful"):
-                    st.session_state.feedback[fb_key] = "up"
-                    st.toast("Thanks for your feedback! 🌿")
-                    st.rerun()
-            with fb_col3:
-                if st.button("👎" + (" ✓" if fb == "down" else ""), key="fb_down", help="Not helpful"):
-                    st.session_state.feedback[fb_key] = "down"
-                    st.toast("Thanks! We'll use this to improve. 🔧")
-                    st.rerun()
-
+            
             # Downloads
             st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
             dl_col1, dl_col2 = st.columns(2)
