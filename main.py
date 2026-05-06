@@ -5,6 +5,7 @@ import base64
 from datetime import datetime
 from src.detector import predict_image, model, class_names
 from src.export import generate_png, generate_pdf
+import hashlib
 
 st.set_page_config(page_title="SpotSense", page_icon="🌿", layout="wide")
 
@@ -27,6 +28,32 @@ def img_to_b64(file_obj):
     data = file_obj.read()
     file_obj.seek(0)
     return base64.b64encode(data).decode()
+
+def analyze_image(image_file):
+    progress = st.progress(0, text="Initializing scan...")
+    for pct, msg in [(20,"Preparing image..."),(45,"Extracting features..."),(75,"Running AI model..."),(95,"Finalizing result...")]:
+        progress.progress(pct, text=msg)
+        time.sleep(0.15)
+    image_file.seek(0)
+    label, confidence, recommendation, reasoning_text = predict_image(image_file, model, class_names)
+    image_file.seek(0)
+    image_bytes = image_file.read()
+    image_name = image_file.name or "camera_capture.jpg"
+    st.session_state.result = (label, confidence, recommendation, reasoning_text)
+    st.session_state.feedback.pop("single", None)
+    st.session_state.scan_history.insert(0, {
+        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "file_name": image_name,
+        "label": label,
+        "confidence": float(confidence),
+        "recommendation": recommendation,
+        "reasoning": reasoning_text,
+        "image_bytes": image_bytes,
+    })
+    st.session_state.scan_history = st.session_state.scan_history[:15]
+    progress.progress(100, text="Done!")
+    time.sleep(0.15)
+    progress.empty()
 
 # Styles
 st.markdown("""
@@ -257,6 +284,16 @@ if not batch_mode:
             </div>
             """, unsafe_allow_html=True)
 
+        # Automatic analysis
+        if image_file:
+            image_file.seek(0)
+            current_hash = hashlib.md5(image_file.read()).hexdigest()
+            image_file.seek(0)
+            if st.session_state.get('current_image_hash') != current_hash:
+                st.session_state.current_image_hash = current_hash
+                analyze_image(image_file)
+                st.rerun()
+
     # Result panel
     with col_result:
         st.markdown('<p class="panel-label">Detection Result</p>', unsafe_allow_html=True)
@@ -265,7 +302,7 @@ if not batch_mode:
             st.markdown("""
             <div class="empty-card">
                 <div class="empty-icon">🔬</div>
-                <div class="empty-text">Upload an image and click<br><strong>Analyze Image</strong> to see results</div>
+                <div class="empty-text">Upload an image to see<br>automatic analysis results</div>
             </div>
             """, unsafe_allow_html=True)
         else:
@@ -338,41 +375,13 @@ if not batch_mode:
 
     # Actions
     st.markdown("<div style='height:14px'></div>", unsafe_allow_html=True)
-    action_col, reset_col, history_col = st.columns([3, 1, 1], gap="small")
-    with action_col:
-        if st.button("Analyze Image →"):
-            if image_file is None:
-                st.error("Please add an image first.")
-            else:
-                progress = st.progress(0, text="Initializing scan...")
-                for pct, msg in [(20,"Preparing image..."),(45,"Extracting features..."),(75,"Running AI model..."),(95,"Finalizing result...")]:
-                    progress.progress(pct, text=msg)
-                    time.sleep(0.15)
-                image_file.seek(0)
-                label, confidence, recommendation, reasoning_text = predict_image(image_file, model, class_names)
-                image_file.seek(0)
-                image_bytes = image_file.read()
-                image_name = image_file.name or "camera_capture.jpg"
-                st.session_state.result = (label, confidence, recommendation, reasoning_text)
-                st.session_state.feedback.pop("single", None)
-                st.session_state.scan_history.insert(0, {
-                    "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                    "file_name": image_name,
-                    "label": label,
-                    "confidence": float(confidence),
-                    "recommendation": recommendation,
-                    "reasoning": reasoning_text,
-                    "image_bytes": image_bytes,
-                })
-                st.session_state.scan_history = st.session_state.scan_history[:15]
-                progress.progress(100, text="Done!")
-                time.sleep(0.15)
-                progress.empty()
-                st.rerun()
+    reset_col, history_col = st.columns([1, 1], gap="small")
     with reset_col:
         if st.button("↺ Reset", key="reset", use_container_width=True):
             st.session_state.scan_history = []
             st.session_state.show_history = False
+            st.session_state.pop('current_image_hash', None)
+            st.session_state.pop('result', None)
             st.rerun()
     with history_col:
         if st.button("🕘 History", key="history", use_container_width=True):
