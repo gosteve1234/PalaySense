@@ -93,7 +93,17 @@ st.markdown("""
     .rcard-healthy::after { background:#a8f060; }
     .rcard-diseased { background:linear-gradient(140deg,#4a0e05 0%,#7a2010 60%,#9e3018 100%); border:1.5px solid rgba(255,255,255,0.1); }
     .rcard-diseased::after { background:#f08060; }
-    .rcard-unknown { background:#ffffff; border:1.5px solid #d4e6b0; box-shadow:0 4px 20px rgba(0,0,0,0.06); }
+    .rcard-unknown { background:#e8e8e8; border:1.5px solid #a8a8a8; box-shadow:0 4px 20px rgba(0,0,0,0.06); }
+    .rcard-unknown .rlabel-dark { color:#555555; }
+    .rcard-unknown .rconf-dark { color:#666666; }
+    .rcard-unknown .reasoning-box-dark { background:#d8d8d8; color:#555555; border-left-color:#999999; }
+    .rcard-unknown .rbar-bg-dark { background:#d0d0d0; }
+    .rcard-unknown .rbar-fill-dark { background:#777777; }
+    .rcard-unknown .rpct-dark { color:#666666; }
+    .rcard-unknown .rdivider-dark { background:#999999; }
+    .rcard-unknown .rrec-title-dark { color:#666666; }
+    .rcard-unknown .rrec-item-dark { color:#555555; }
+    .rcard-unknown .rrec-num-dark { background:#d0d0d0; color:#444444; }
 
     .rpill { display:inline-flex; align-items:center; gap:6px; padding:4px 12px; border-radius:99px; font-size:10px; font-weight:700; letter-spacing:1px; text-transform:uppercase; margin-bottom:14px; }
     .rpill-light { background:rgba(255,255,255,0.15); color:rgba(255,255,255,0.85); }
@@ -138,7 +148,7 @@ st.markdown("""
     .batch-badge { padding:3px 12px; border-radius:99px; font-size:11px; font-weight:700; }
     .batch-badge-diseased { background:#fce8e0; color:#8b2e0f; }
     .batch-badge-healthy  { background:#e4f0d0; color:#2a5218; }
-    .batch-badge-unknown  { background:#f0f0ec; color:#6b6b65; }
+    .batch-badge-unknown  { background:#d0d0d0; color:#444444; }
     .batch-conf { font-size:12px; color:#8aaa60; margin-bottom:8px; }
     .batch-bar-bg { background:#e8f0d8; border-radius:99px; height:5px; overflow:hidden; margin-bottom:10px; }
     .batch-bar-fill { height:100%; border-radius:99px; background:#4a8e28; }
@@ -157,7 +167,7 @@ st.markdown("""
     .hist-badge { display:inline-block; padding:2px 10px; border-radius:99px; font-size:10px; font-weight:700; letter-spacing:0.5px; }
     .hist-badge-diseased { background:#fce8e0; color:#8b2e0f; }
     .hist-badge-healthy  { background:#e4f0d0; color:#2a5218; }
-    .hist-badge-unknown  { background:#f0f0ec; color:#6b6b65; }
+    .hist-badge-unknown  { background:#d0d0d0; color:#444444; }
 
     .hiw { background:#fff; border:1.5px solid #d4e6b0; border-radius:20px; padding:32px; margin-top:40px; }
     .hiw-label { font-size:10px; font-weight:700; color:#8aaa60; letter-spacing:1.5px; text-transform:uppercase; margin-bottom:24px; }
