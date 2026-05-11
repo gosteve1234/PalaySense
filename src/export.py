@@ -14,7 +14,7 @@ def generate_png(image_file, label, confidence, recommendation=None):
     result_banner = Image.new("RGB", (500, banner_height), color=(238, 244, 231))
     draw = ImageDraw.Draw(result_banner)
 
-    draw.text((20, 15), "PALAi — Detection Result", fill=(45, 80, 22))
+    draw.text((20, 15), "PalaySense — Detection Result", fill=(45, 80, 22))
     draw.text((20, 45), f"Category: {label}", fill=(30, 30, 30))
     draw.text((20, 70), f"Confidence: {confidence:.2f}%", fill=(90, 90, 84))
 
@@ -50,7 +50,7 @@ def generate_pdf(image_file, label, confidence, recommendation=None):
     c.rect(0, height - 60, width, 60, fill=True, stroke=False)
     c.setFillColor(colors.white)
     c.setFont("Helvetica-Bold", 18)
-    c.drawString(40, height - 38, "PALAi — Brown Spot Detection Report")
+    c.drawString(40, height - 38, "PalaySense — Brown Spot Detection Report")
 
     # Result Section
     c.setFillColor(colors.HexColor("#1a1a16"))
