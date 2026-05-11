@@ -3,7 +3,7 @@ import time
 import io
 import base64
 from datetime import datetime
-from src.detector import predict_image, model, class_names
+from src.detector import predict_image
 from src.export import generate_png, generate_pdf
 import hashlib
 
@@ -35,7 +35,7 @@ def analyze_image(image_file):
         progress.progress(pct, text=msg)
         time.sleep(0.15)
     image_file.seek(0)
-    label, confidence, recommendation, reasoning_text = predict_image(image_file, model, class_names)
+    label, confidence, recommendation, reasoning_text = predict_image(image_file)
     image_file.seek(0)
     image_bytes = image_file.read()
     image_name = image_file.name or "camera_capture.jpg"
@@ -457,7 +457,7 @@ else:
                 batch_progress.progress(pct, text=f"Scanning {f.name}...")
                 f.seek(0)
                 try:
-                    lbl, conf, rec, rsn = predict_image(f, model, class_names)
+                    lbl, conf, rec, rsn = predict_image(f)
                     f.seek(0)
                     img_bytes = f.read()
                     st.session_state.batch_results.append({
