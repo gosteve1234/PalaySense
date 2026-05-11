@@ -358,13 +358,13 @@ if not batch_mode:
                     image_file.seek(0)
                     png_buf = generate_png(image_file, label, confidence, recommendation)
                     st.download_button("⬇️ Download PNG", data=png_buf,
-                        file_name="palai_result.png", mime="image/png", use_container_width=True)
+                        file_name="palaysense_result.png", mime="image/png", use_container_width=True)
             with dl_col2:
                 if image_file is not None:
                     image_file.seek(0)
                     pdf_buf = generate_pdf(image_file, label, confidence, recommendation)
                     st.download_button("⬇️ Download PDF", data=pdf_buf,
-                        file_name="palai_result.pdf", mime="application/pdf", use_container_width=True)
+                        file_name="palaysense_result.pdf", mime="application/pdf", use_container_width=True)
 
     # Actions
     st.markdown("<div style='height:14px'></div>", unsafe_allow_html=True)
