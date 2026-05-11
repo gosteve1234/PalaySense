@@ -2,7 +2,6 @@
 
 > AI-powered plant disease detector that identifies brown spot from images
 
-
 ---
 
 ## ✨ Features
