@@ -7,7 +7,7 @@ from src.detector import predict_image, model, class_names
 from src.export import generate_png, generate_pdf
 import hashlib
 
-st.set_page_config(page_title="SpotSense", page_icon="🌿", layout="wide")
+st.set_page_config(page_title="PalaySense", page_icon="🌿", layout="wide")
 
 # Session state
 for key, val in [
@@ -225,7 +225,7 @@ st.markdown("""
     <div class="nav-left">
         <div class="nav-icon">🌿</div>
         <div>
-            <div class="nav-title">SpotSense</div>
+            <div class="nav-title">PalaySense</div>
             <div class="nav-sub">Brown Spot Detection System</div>
         </div>
     </div>
