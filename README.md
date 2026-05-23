@@ -1,6 +1,6 @@
 # 🌿 PalaySense — Brown Spot Detection
 
-> AI-powered plant disease detector that identifies brown spot from images
+> Machine learning plant disease detector that identifies brown spot from images
 
 ---
 
