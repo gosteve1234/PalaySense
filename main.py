@@ -229,7 +229,6 @@ st.markdown("""
             <div class="nav-sub">Brown Spot Detection System</div>
         </div>
     </div>
-    <div class="nav-pill">AI POWERED</div>
 </div>
 """, unsafe_allow_html=True)
 
